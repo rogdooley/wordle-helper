@@ -494,6 +494,11 @@ def home(request: Request):
     return RedirectResponse("/solve", status_code=303)
 
 
+@app.get("/healthz")
+def healthz():
+    return {"status": "ok"}
+
+
 @app.get("/readme", response_class=HTMLResponse)
 def readme(request: Request):
     text = (ROOT / "README.md").read_text(encoding="utf-8")

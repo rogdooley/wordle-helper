@@ -1,0 +1,15 @@
+services:
+  wordle:
+    build: .
+    container_name: wordle
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - /opt/docker/data/wordle/data:/app/data
+    networks:
+      - traefik
+
+networks:
+  traefik:
+    external: true
