@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block body %}
+<section class="card">
+  <div class="row row-space">
+    <div>
+      <h1>Deduction board</h1>
+      <p class="muted">Type a guess, click tiles to set colors, then lock the row.</p>
+    </div>
+    <div class="row">
+      <label class="toggle">
+        <input id="debugToggle" type="checkbox" />
+        <span>Show why</span>
+      </label>
+      <button id="resetAll" class="btn btn-ghost" type="button">Reset All</button>
+    </div>
+  </div>
+
+  <div id="board" class="board" data-max="{{ max_guesses }}" data-initial="{{ initial_rows }}"></div>
+
+  <div class="hr"></div>
+
+  <div id="results" class="results">
+    <div class="muted">Lock at least one row to see suggestions.</div>
+  </div>
+</section>
+
+<script src="/static/js/solver.js"></script>
+{% endblock %}

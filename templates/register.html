@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block body %}
+<section class="card">
+  <h1>Register</h1>
+  <p class="muted">Use the invite link you received. Password must be at least 15 characters.</p>
+
+  {% if error %}
+  <div class="alert">{{ error }}</div>
+  {% endif %}
+
+  <form class="form" action="/register" method="post" autocomplete="off">
+    <label>
+      <span>Invite code</span>
+      <input name="code" type="text" value="{{ code }}" required />
+    </label>
+
+    <label>
+      <span>Username</span>
+      <input name="username" type="text" required />
+    </label>
+
+    <label>
+      <span>Password</span>
+      <input name="password" type="password" required minlength="15" />
+    </label>
+
+    <button class="btn btn-primary" type="submit">Create account</button>
+  </form>
+</section>
+{% endblock %}

@@ -1,0 +1,53 @@
+<div class="results-head">
+  <div class="results-count">
+    <span class="pill">Remaining: {{ remaining }}</span>
+  </div>
+</div>
+
+{% if debug and contradictions %}
+  <div class="contradictions">
+    <h3>Contradictions</h3>
+    <ul>
+      {% for c in contradictions %}
+        <li><code>{{ c.code }}</code> — {{ c.detail }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+{% endif %}
+
+{% if debug and constraints %}
+  <div class="debug">
+    <h3>Derived constraints</h3>
+    <div class="grid2">
+      <div>
+        <h4>Greens</h4>
+        <pre class="pre-sm">{{ constraints.greens }}</pre>
+      </div>
+      <div>
+        <h4>Yellows (forbidden positions)</h4>
+        <pre class="pre-sm">{{ constraints.yellows }}</pre>
+      </div>
+      <div>
+        <h4>Grays</h4>
+        <pre class="pre-sm">{{ constraints.grays }}</pre>
+      </div>
+      <div>
+        <h4>Counts (min/max)</h4>
+        <pre class="pre-sm">min={{ constraints.min_counts }}
+max={{ constraints.max_counts }}</pre>
+      </div>
+    </div>
+  </div>
+{% endif %}
+
+{% if remaining == 0 %}
+  <div class="alert warn">
+    No possible answers remain. Check your color markings (repeated letters are the usual culprit).
+  </div>
+{% endif %}
+
+<div class="wordlist">
+  {% for w in candidates %}
+    <span class="word">{{ w }}</span>
+  {% endfor %}
+</div>

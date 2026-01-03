@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block body %}
+<section class="card">
+  <h1>Login</h1>
+  <p class="muted">Invite-only tool. If you don't have access, ask for an invite link.</p>
+
+  {% if error %}
+  <div class="alert">{{ error }}</div>
+  {% endif %}
+
+  <form class="form" action="/login" method="post" autocomplete="off">
+    <label>
+      <span>Username</span>
+      <input name="username" type="text" required />
+    </label>
+
+    <label>
+      <span>Password</span>
+      <input name="password" type="password" required />
+    </label>
+
+    <button class="btn btn-primary" type="submit">Login</button>
+  </form>
+</section>
+{% endblock %}
