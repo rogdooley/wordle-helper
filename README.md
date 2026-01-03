@@ -15,7 +15,7 @@ This project is meant to stay simple and enjoyable for a couple years.
 
 ---
 
-## For a curious teen: how to think about deduction
+## How to think about deduction
 
 Wordle deduction is about **constraints**:
 
@@ -27,6 +27,7 @@ Wordle deduction is about **constraints**:
 As you add guesses, you add more constraints. The list of possible answers shrinks.
 
 If you ever get **zero** possible answers, it usually means:
+
 - You clicked the wrong color on a letter, or
 - A repeated-letter situation caused a contradiction (example: one guess suggests there are 2 L’s, another suggests there’s only 1)
 
@@ -133,21 +134,21 @@ Optional: re-sync allowed words rarely (it’s stable):
 
 ## Why solvers can be wrong (teachable moment)
 
-1) **Repeated letters**: a single wrong click can “prove” there are 2 of a letter when there’s only 1.
+1. **Repeated letters**: a single wrong click can “prove” there are 2 of a letter when there’s only 1.
 
-2) **Human mistakes**: one bad color choice can make the puzzle impossible. The contradiction panel helps you find these.
+2. **Human mistakes**: one bad color choice can make the puzzle impossible. The contradiction panel helps you find these.
 
-3) **Word list differences**: different solvers use different lists. This app uses locally cached files.
+3. **Word list differences**: different solvers use different lists. This app uses locally cached files.
 
 ---
 
 ## Quick use
 
-1) Log in.
-2) Enter a guess.
-3) Click each tile to set the color (unknown → green → yellow → gray).
-4) Click **Lock** for that row.
-5) Repeat (up to 5).
-6) Click **Reset All** to start over.
+1. Log in.
+2. Enter a guess.
+3. Click each tile to set the color (unknown → green → yellow → gray).
+4. Click **Lock** for that row.
+5. Repeat (up to 5).
+6. Click **Reset All** to start over.
 
 Use the **“Show why”** toggle if you hit a contradiction.
