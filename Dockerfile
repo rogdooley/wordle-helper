@@ -21,7 +21,7 @@ RUN pip install --no-cache-dir uv
 COPY pyproject.toml /app/pyproject.toml
 
 # Install deps into system Python (no venv, no cache at runtime)
-RUN uv pip install --system --no-dev .
+RUN uv pip install --system .
 
 # Copy application
 COPY . /app
