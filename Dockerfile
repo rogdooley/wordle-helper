@@ -21,7 +21,7 @@ WORKDIR /app
 
 RUN pip install --no-cache-dir uv
 
-RUN useradd -r -u 10001 appuser
+RUN useradd -u 10001 appuser
 
 COPY pyproject.toml /app/pyproject.toml
 RUN uv venv && uv sync --no-dev
