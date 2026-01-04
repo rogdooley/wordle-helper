@@ -1,4 +1,8 @@
-# Wordle Assistant (Invite-Only)
+# Wordle Assistant
+
+I had ChatGPT build this for someone that I play Wordle with.
+
+You have to have at least three words that failed before any help is given.
 
 This is a small private web app that helps you **deduce Wordle answers** from a sequence of guesses.
 
