@@ -1,10 +1,6 @@
 FROM python:3.12.8-slim
 
-# System deps:
-# - ca-certificates: HTTPS validation for word list sync (GitHub / FiveForks)
-# - curl: handy for debugging inside container
-# - cron: daily used-word sync
-# - tzdata: local timezone for cron schedules
+# System deps
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     curl \
@@ -14,30 +10,35 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    APP_HOME=/app \
     TZ=America/New_York
 
 WORKDIR /app
 
+# Install uv ONLY for build-time dependency resolution
 RUN pip install --no-cache-dir uv
 
-RUN useradd -u 10001 -m appuser \
-    && mkdir -p /home/appuser/.cache/uv \
-    && chown -R appuser:appuser /home/appuser
-
+# Copy dependency metadata
 COPY pyproject.toml /app/pyproject.toml
-RUN uv venv && uv sync --no-dev
 
+# Install deps into system Python (no venv, no cache at runtime)
+RUN uv pip install --system --no-dev .
+
+# Copy application
 COPY . /app
 
-RUN mkdir -p /app/data \
-  && chown -R appuser:appuser /app
+# Create non-root user (no home needed now)
+RUN useradd -u 10001 appuser \
+    && mkdir -p /app/data \
+    && chown -R appuser:appuser /app
 
-# Cron: daily used word sync at 06:00 local time (container TZ)
-RUN printf "0 6 * * * cd /app && uv run python cli.py used-sync >> /app/data/cron.log 2>&1\n" > /etc/cron.d/wordle \
-  && chmod 0644 /etc/cron.d/wordle \
-  && crontab /etc/cron.d/wordle
+# Cron: daily used-word sync at 06:00 local time
+RUN printf "0 6 * * * cd /app && python cli.py used-sync >> /app/data/cron.log 2>&1\n" \
+    > /etc/cron.d/wordle \
+    && chmod 0644 /etc/cron.d/wordle \
+    && crontab /etc/cron.d/wordle
+
+USER appuser
 
 EXPOSE 8000
 
-CMD ["sh", "-c", "cron && exec su -s /bin/sh -c 'uv run uvicorn app:app --host 0.0.0.0 --port 8000' appuser"]
+CMD ["sh", "-c", "cron && exec python -m uvicorn app:app --host 0.0.0.0 --port 8000"]
