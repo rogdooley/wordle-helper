@@ -23,22 +23,22 @@ COPY pyproject.toml /app/pyproject.toml
 # Install deps into system Python (no venv, no cache at runtime)
 RUN uv pip install --system .
 
-# Copy application
+# Download supercronic (static binary)
+ADD https://github.com/aptible/supercronic/releases/download/v0.2.29/supercronic-linux-arm64 /usr/local/bin/supercronic
+RUN chmod +x /usr/local/bin/supercronic
+
+# App code + cron
 COPY . /app
+COPY cron/wordle.cron /app/wordle.cron
 
 # Create non-root user (no home needed now)
 RUN useradd -u 10001 appuser \
     && mkdir -p /app/data \
     && chown -R appuser:appuser /app
 
-# Cron: daily used-word sync at 06:00 local time
-RUN printf "0 6 * * * cd /app && python cli.py used-sync >> /app/data/cron.log 2>&1\n" \
-    > /etc/cron.d/wordle \
-    && chmod 0644 /etc/cron.d/wordle \
-    && crontab /etc/cron.d/wordle
 
 USER appuser
 
 EXPOSE 8000
 
-CMD ["sh", "-c", "cron && exec python -m uvicorn app:app --host 0.0.0.0 --port 8000"]
+CMD ["sh", "-c", "supercronic /app/wordle.cron & exec python -m uvicorn app:app --host 0.0.0.0 --port 8000"]
