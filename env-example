@@ -6,3 +6,5 @@ TRUSTED_PROXY_IPS=
 
 COOKIE_SECURE=true
 TZ=
+
+DATA_DIR=/app/data
