@@ -473,6 +473,7 @@ async def add_headers(request: Request, call_next):
             "form-action 'self'",
         ]
     )
+
     resp.headers["Content-Security-Policy"] = csp
     resp.headers["X-Content-Type-Options"] = "nosniff"
     resp.headers["X-Frame-Options"] = "DENY"
@@ -492,11 +493,6 @@ def home(request: Request):
     if not u:
         return RedirectResponse("/login", status_code=303)
     return RedirectResponse("/solve", status_code=303)
-
-
-@app.get("/healthz")
-def healthz():
-    return {"status": "ok"}
 
 
 @app.get("/readme", response_class=HTMLResponse)
@@ -752,3 +748,8 @@ async def solve_submit(request: Request, user: str = Depends(require_auth)):
         constraints=constraints if debug else None,
         contradictions=contradictions if debug else None,
     )
+
+
+@app.get("/healthz")
+def healthz():
+    return {"status": "ok"}

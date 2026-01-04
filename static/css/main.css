@@ -223,3 +223,23 @@ input:focus{border-color:rgba(122,162,255,0.7); box-shadow:0 0 0 3px rgba(122,16
   color:var(--muted);
 }
 .footer-inner{max-width:980px; margin:0 auto; padding:0 18px}
+
+@media (pointer: coarse){
+  .guess-row input[type="text"]{display:none}
+  .guess-row{grid-template-columns: repeat(5, 44px) 1fr;}
+}
+
+.hint{
+  margin-top:10px;
+  padding:10px 12px;
+  border-radius:12px;
+  border:1px solid rgba(122,162,255,0.35);
+  background:rgba(122,162,255,0.08);
+  color:var(--text);
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+}
+.hint .hint-text{color:var(--text)}
+.hint .hint-actions{flex:0 0 auto}

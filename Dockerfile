@@ -1,46 +1,41 @@
 FROM python:3.12.8-slim
 
-# --- system deps ---
-RUN apt-get update && apt-get install -y \
-    cron \
+# System deps:
+# - ca-certificates: HTTPS validation for word list sync (GitHub / FiveForks)
+# - curl: handy for debugging inside container
+# - cron: daily used-word sync
+# - tzdata: local timezone for cron schedules
+RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     curl \
-    && rm -rf /var/lib/apt/lists/*
+    cron \
+    tzdata \
+  && rm -rf /var/lib/apt/lists/*
 
-# --- env ---
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    APP_HOME=/app
+    APP_HOME=/app \
+    TZ=America/New_York
 
 WORKDIR /app
 
-# --- install uv ---
 RUN pip install --no-cache-dir uv
 
-# --- copy project ---
-COPY pyproject.toml ./
-RUN uv pip install --system --no-deps .
+RUN useradd -r -u 10001 appuser
 
-COPY . .
+COPY pyproject.toml /app/pyproject.toml
+RUN uv venv && uv sync --no-dev
 
-# --- create non-root user ---
-RUN useradd -r -u 10001 appuser \
-    && mkdir -p /app/data \
-    && chown -R appuser:appuser /app
+COPY . /app
 
-USER appuser
+RUN mkdir -p /app/data \
+  && chown -R appuser:appuser /app
 
-# Set timezone
-ENV TZ=America/New_York
-RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+# Cron: daily used word sync at 06:00 local time (container TZ)
+RUN printf "0 6 * * * cd /app && uv run python cli.py used-sync >> /app/data/cron.log 2>&1\n" > /etc/cron.d/wordle \
+  && chmod 0644 /etc/cron.d/wordle \
+  && crontab /etc/cron.d/wordle
 
-# --- cron setup ---
-# Daily used-word sync at 06:00 UTC
-RUN echo "0 1 * * * cd /app && uv run python cli.py used-sync >> /app/data/cron.log 2>&1" > /app/cronfile \
-    && crontab /app/cronfile
-
-# --- expose ---
 EXPOSE 8000
 
-# --- start both cron + app ---
-CMD ["sh", "-c", "cron && uv run uvicorn app:app --host 0.0.0.0 --port 8000"]
+CMD ["sh", "-c", "cron && exec su -s /bin/sh -c 'uv run uvicorn app:app --host 0.0.0.0 --port 8000' appuser"]

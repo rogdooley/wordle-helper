@@ -1,0 +1,8 @@
+APP_SECRET_KEY=CHANGE_ME_LONG_RANDOM
+BASE_URL=
+
+# Traefik container IP on the 'traefik' network (example)
+TRUSTED_PROXY_IPS=
+
+COOKIE_SECURE=true
+TZ=
