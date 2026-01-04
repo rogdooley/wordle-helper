@@ -1,2 +1,4 @@
 # Sync used Wordle answers once per day at 04:00 local time
 0 4 * * * python /app/cli.py used-sync >> /app/data/cron.log 2>&1
+
+15 3 1 * * python /app/cli.py words-sync >> /app/data/cron.log 2>&1

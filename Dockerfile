@@ -41,4 +41,7 @@ USER appuser
 
 EXPOSE 8000
 
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+ENTRYPOINT ["docker-entrypoint.sh"]
+
 CMD ["sh", "-c", "supercronic /app/wordle.cron & exec python -m uvicorn app:app --host 0.0.0.0 --port 8000"]
