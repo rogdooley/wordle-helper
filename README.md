@@ -2,7 +2,8 @@
 
 I had ChatGPT build this for someone that I play Wordle with.
 
-You must have **at least three failed guesses** before any help is given. (Not exactly true, but it's a bug I'm not going to fix at the moment)
+You must have **at least three locked guesses** before suggestions are shown.
+(This rule is enforced by the server, not the UI.)
 
 This is a **small, private web app** that helps you **deduce Wordle answers** from a sequence of guesses.
 
@@ -13,7 +14,7 @@ Instead, you enter up to **5 guesses** and mark each letter as:
 - **Yellow** — right letter, wrong place
 - **Gray** — not in the word
 
-The app then narrows down **only possible answers**, excluding already-used Wordle answers by default.
+Previously used Wordle answers may also appear, clearly marked and shown separately.
 
 This project is meant to stay **simple and enjoyable** for a couple of years.
 
@@ -28,6 +29,8 @@ This project is meant to stay **simple and enjoyable** for a couple of years.
 ### Desktop
 
 ![Desktop solver](screenshots/desktop.png)
+
+_Previously used answers are shown separately when applicable._
 
 ### Login
 
@@ -59,6 +62,22 @@ If you ever get **zero** possible answers, it usually means:
 
 The app can show a **“why” panel** to help you spot contradictions.
 
+### About previously used answers
+
+As of **February 2026**, the New York Times may occasionally reuse
+previously used Wordle answers.
+
+For that reason, this app does **not automatically discard** words
+that have appeared before.
+
+Instead:
+
+- Words that have **never been used** are shown as normal candidates
+- Words that **have been used previously** are shown separately and
+  visually distinct
+
+This keeps the deduction honest while still reflecting current Wordle behavior.
+
 ---
 
 ## For technical readers: design overview
@@ -87,7 +106,7 @@ This project caches two local files under `data/`:
 - `allowed_words.txt` — allowed 5-letter guesses list  
   (downloaded via `cli.py words-sync`)
 - `used_words.json` — used Wordle answers list  
-  (downloaded via `cli.py used-sync`, excluded by default)
+  (downloaded via `cli.py used-sync`, shown separately when relevant)
 
 The app **does not scrape websites at runtime**.
 

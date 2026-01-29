@@ -347,7 +347,9 @@ def solve_words(
     *, allowed: list[str], used: set[str], guesses: list[Guess]
 ) -> tuple[list[str], Constraints, list[Contradiction]]:
     c, contradictions = derive_constraints(guesses)
-    candidates: list[str] = [w for w in allowed if w not in used and word_matches(w, c)]
+    candidates: list[str] = [
+        w for w in allowed if word_matches(w, c)
+    ]  # [w for w in allowed if w not in used and word_matches(w, c)]
     if not candidates and not contradictions:
         contradictions.append(
             Contradiction(
@@ -727,26 +729,54 @@ async def solve_submit(request: Request, user: str = Depends(require_auth)):
         states_raw = item.get("states", [])
         if not isinstance(states_raw, list) or len(states_raw) != 5:
             continue
-        states: list[str] = [str(x) for x in states_raw]
+
+        states = [str(s) for s in states_raw]
         if any(s not in {"unknown", "green", "yellow", "gray"} for s in states):
             continue
+
         guesses.append(Guess(w, tuple(states)))  # type: ignore[arg-type]
+
+    # Only guesses with all colors set count
+    locked_guesses = [g for g in guesses if "unknown" not in g.states]
+
+    # Enforce minimum deduction threshold
+    if len(locked_guesses) < INITIAL_GUESSES_SHOWN:
+        return render(
+            "_results.html",
+            request=request,
+            user=user,
+            remaining=None,
+            fresh_candidates=[],
+            used_candidates=[],
+            need_more=INITIAL_GUESSES_SHOWN - len(locked_guesses),
+            debug=False,
+            constraints=None,
+            contradictions=[],
+        )
 
     allowed = load_allowed_words()
     used = load_used_words()
-    candidates, constraints, contradictions = solve_words(
-        allowed=allowed, used=used, guesses=guesses
+
+    all_candidates, constraints, contradictions = solve_words(
+        allowed=allowed,
+        used=set(),  # do NOT exclude used here
+        guesses=locked_guesses,  # important
     )
+
+    fresh = [w for w in all_candidates if w not in used]
+    previously_used = [w for w in all_candidates if w in used]
 
     return render(
         "_results.html",
         request=request,
         user=user,
-        remaining=len(candidates),
-        candidates=candidates,
+        remaining=len(all_candidates),
+        fresh_candidates=fresh,
+        used_candidates=previously_used,
         debug=debug,
         constraints=constraints if debug else None,
         contradictions=contradictions if debug else None,
+        need_more=0,
     )
 
 

@@ -1,53 +1,83 @@
 <div class="results-head">
+  {% if remaining is not none %}
   <div class="results-count">
     <span class="pill">Remaining: {{ remaining }}</span>
   </div>
+  {% endif %}
+</div>
+
+{% if need_more and need_more > 0 %}
+<div class="alert info">
+  Lock {{ need_more }} more guess{{ "es" if need_more != 1 else "" }}
+  to see possible answers.
+</div>
+{% else %}
+
+<div class="nyt-note">
+  <strong>Note:</strong>
+  As of Feb 2026, the New York Times may reuse previously used Wordle answers.
+  These words are shown separately below.
 </div>
 
 {% if debug and contradictions %}
-  <div class="contradictions">
-    <h3>Contradictions</h3>
-    <ul>
-      {% for c in contradictions %}
-        <li><code>{{ c.code }}</code> — {{ c.detail }}</li>
-      {% endfor %}
-    </ul>
-  </div>
+<div class="contradictions">
+  <h3>Contradictions</h3>
+  <ul>
+    {% for c in contradictions %}
+    <li><code>{{ c.code }}</code> — {{ c.detail }}</li>
+    {% endfor %}
+  </ul>
+</div>
 {% endif %}
 
 {% if debug and constraints %}
-  <div class="debug">
-    <h3>Derived constraints</h3>
-    <div class="grid2">
-      <div>
-        <h4>Greens</h4>
-        <pre class="pre-sm">{{ constraints.greens }}</pre>
-      </div>
-      <div>
-        <h4>Yellows (forbidden positions)</h4>
-        <pre class="pre-sm">{{ constraints.yellows }}</pre>
-      </div>
-      <div>
-        <h4>Grays</h4>
-        <pre class="pre-sm">{{ constraints.grays }}</pre>
-      </div>
-      <div>
-        <h4>Counts (min/max)</h4>
-        <pre class="pre-sm">min={{ constraints.min_counts }}
-max={{ constraints.max_counts }}</pre>
-      </div>
+<div class="debug">
+  <h3>Derived constraints</h3>
+  <div class="grid2">
+    <div>
+      <h4>Greens</h4>
+      <pre class="pre-sm">{{ constraints.greens }}</pre>
+    </div>
+    <div>
+      <h4>Yellows (forbidden positions)</h4>
+      <pre class="pre-sm">{{ constraints.yellows }}</pre>
+    </div>
+    <div>
+      <h4>Grays</h4>
+      <pre class="pre-sm">{{ constraints.grays }}</pre>
+    </div>
+    <div>
+      <h4>Counts (min/max)</h4>
+      <pre class="pre-sm">min={{ constraints.min_counts }}
+        max={{ constraints.max_counts }}</pre>
     </div>
   </div>
+</div>
 {% endif %}
 
 {% if remaining == 0 %}
-  <div class="alert warn">
-    No possible answers remain. Check your color markings (repeated letters are the usual culprit).
-  </div>
+<div class="alert warn">
+  No possible answers remain. Check your color markings
+  (repeated letters are the usual culprit).
+</div>
 {% endif %}
 
+{% if fresh_candidates %}
+<h3>Possible answers</h3>
 <div class="wordlist">
-  {% for w in candidates %}
-    <span class="word">{{ w }}</span>
+  {% for w in fresh_candidates %}
+  <span class="word">{{ w }}</span>
   {% endfor %}
 </div>
+{% endif %}
+
+{% if used_candidates %}
+<h3>Previously used (still possible)</h3>
+<div class="wordlist used">
+  {% for w in used_candidates %}
+  <span class="word used">{{ w }}</span>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% endif %}
