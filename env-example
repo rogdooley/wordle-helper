@@ -8,3 +8,4 @@ COOKIE_SECURE=true
 TZ=
 
 DATA_DIR=/app/data
+AUTH_ENABLED=false

@@ -56,6 +56,12 @@ INITIAL_GUESSES_SHOWN = 3
 FAILS_TO_BAN = 3
 BAN_DURATION = timedelta(hours=24)
 
+AUTH_ENABLED = os.environ.get("AUTH_ENABLED", "true").strip().lower() not in {
+    "0",
+    "false",
+    "no",
+}
+
 # -----------------------------
 # Logging
 # -----------------------------
@@ -453,6 +459,8 @@ def current_user(request: Request) -> str | None:
 
 
 def require_auth(request: Request) -> str:
+    if not AUTH_ENABLED:
+        return "anonymous"
     u = current_user(request)
     if not u:
         raise HTTPException(status_code=303, headers={"Location": "/login"})
@@ -491,9 +499,6 @@ def render(name: str, **ctx: Any) -> HTMLResponse:
 
 @app.get("/", response_class=HTMLResponse)
 def home(request: Request):
-    u = current_user(request)
-    if not u:
-        return RedirectResponse("/login", status_code=303)
     return RedirectResponse("/solve", status_code=303)
 
 
@@ -511,6 +516,8 @@ def readme(request: Request):
 
 @app.get("/login", response_class=HTMLResponse)
 def login_form(request: Request):
+    if not AUTH_ENABLED:
+        return RedirectResponse("/solve", status_code=303)
     return render("login.html", request=request, error=None, title="Login")
 
 
@@ -518,6 +525,9 @@ def login_form(request: Request):
 def login_submit(
     request: Request, username: str = Form(...), password: str = Form(...)
 ):
+    if not AUTH_ENABLED:
+        return RedirectResponse("/solve", status_code=303)
+
     u = normalize_username(username)
     ip = client_ip(request)
 
@@ -574,9 +584,7 @@ def login_submit(
 
 @app.post("/logout")
 def logout(request: Request):
-    resp = RedirectResponse("/login", status_code=303)
-    resp.delete_cookie("session", path="/")
-    return resp
+    return RedirectResponse("/solve", status_code=303)
 
 
 @app.get("/register", response_class=HTMLResponse)
@@ -593,6 +601,9 @@ def register_submit(
     username: str = Form(...),
     password: str = Form(...),
 ):
+    if not AUTH_ENABLED:
+        return RedirectResponse("/solve", status_code=303)
+
     u = normalize_username(username)
     ip = client_ip(request)
 
