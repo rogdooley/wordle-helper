@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import ipaddress
 import json
 import logging
 import logging.handlers
@@ -72,8 +73,9 @@ DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 def _make_logger(name: str, filename: str) -> logging.Logger:
     logger = logging.getLogger(name)
-    if logger.handlers:
-        return logger
+
+    # Always reset handlers to ensure correct formatter
+    logger.handlers.clear()
 
     logger.setLevel(logging.INFO)
 
@@ -172,13 +174,40 @@ def normalize_username(username: str) -> str:
     return username.strip().lower()
 
 
+def _is_trusted_proxy(peer: str) -> bool:
+    if not TRUSTED_PROXY_IPS:
+        return False
+
+    try:
+        peer_ip = ipaddress.ip_address(peer)
+    except ValueError:
+        return False
+
+    for entry in TRUSTED_PROXY_IPS:
+        try:
+            if "/" in entry:
+                if peer_ip in ipaddress.ip_network(entry, strict=False):
+                    return True
+            else:
+                if peer == entry:
+                    return True
+        except ValueError:
+            continue
+
+    return False
+
+
 def client_ip(request: Request) -> str:
     peer = request.client.host if request.client else "unknown"
-    if peer in TRUSTED_PROXY_IPS:
+
+    if _is_trusted_proxy(peer):
         xff = request.headers.get("x-forwarded-for", "")
         if xff:
-            ip = xff.split(",")[0].strip()
-            return ip or peer
+            # First IP in list is original client
+            real_ip = xff.split(",")[0].strip()
+            if real_ip:
+                return real_ip
+
     return peer
 
 
