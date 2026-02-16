@@ -590,17 +590,6 @@ async def structured_request_logger(request: Request, call_next):
 
     duration_ms = int((now_utc() - start).total_seconds() * 1000)
 
-    forwarded = {
-        "x_forwarded_for": request.headers.get("x-forwarded-for"),
-        "x_real_ip": request.headers.get("x-real-ip"),
-        "forwarded": request.headers.get("forwarded"),
-        "peer": request.client.host if request.client else None,
-    }
-
-    app_logger.info(
-        "proxy_debug",
-        extra={"extra_data": {"type": "proxy_debug", **forwarded}},
-    )
     app_logger.info(
         "http_request",
         extra={
