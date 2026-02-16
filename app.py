@@ -7,6 +7,7 @@ import logging.handlers
 import os
 import re
 import sqlite3
+import uuid
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -73,15 +74,65 @@ def _make_logger(name: str, filename: str) -> logging.Logger:
     logger = logging.getLogger(name)
     if logger.handlers:
         return logger
+
     logger.setLevel(logging.INFO)
+
     fh = logging.handlers.RotatingFileHandler(
-        DATA_DIR / filename, maxBytes=2_000_000, backupCount=5
+        DATA_DIR / filename,
+        maxBytes=5_000_000,
+        backupCount=5,
     )
-    fmt = logging.Formatter("%(asctime)sZ %(levelname)s %(name)s %(message)s")
-    fh.setFormatter(fmt)
+
+    class JsonFormatter(logging.Formatter):
+        def format(self, record: logging.LogRecord) -> str:
+            payload = {
+                "ts": datetime.utcnow().isoformat() + "Z",
+                "level": record.levelname,
+                "logger": record.name,
+                "message": record.getMessage(),
+            }
+            if hasattr(record, "extra_data"):
+                payload.update(record.extra_data)
+            return json.dumps(payload, separators=(",", ":"))
+
+    fh.setFormatter(JsonFormatter())
     logger.addHandler(fh)
     logger.propagate = False
     return logger
+
+
+def log_security_event(
+    *,
+    event: str,
+    ip: str,
+    outcome: str,
+    user: str | None = None,
+    reason: str | None = None,
+    attempts: int | None = None,
+    banned_until: datetime | None = None,
+    extra: dict | None = None,
+) -> None:
+    payload: dict[str, object] = {
+        "type": "security",
+        "event": event,  # login / register
+        "ip": ip,
+        "outcome": outcome,  # success / fail / blocked
+        "user": user or "anonymous",
+    }
+
+    if reason:
+        payload["reason"] = reason
+
+    if attempts is not None:
+        payload["attempts"] = attempts
+
+    if banned_until is not None:
+        payload["banned_until"] = banned_until.isoformat()
+
+    if extra:
+        payload.update(extra)
+
+    sec_logger.info(event, extra={"extra_data": payload})
 
 
 app_logger = _make_logger("app", "app.log")
@@ -493,18 +544,38 @@ async def add_headers(request: Request, call_next):
 
 
 @app.middleware("http")
-async def request_logger(request: Request, call_next):
+async def structured_request_logger(request: Request, call_next):
     start = now_utc()
     ip = client_ip(request)
     method = request.method
     path = request.url.path
+    ua = request.headers.get("user-agent", "")
+    request_id = uuid.uuid4().hex
+
+    if AUTH_ENABLED:
+        user = current_user(request) or "anonymous"
+    else:
+        user = "anonymous"
 
     response = await call_next(request)
 
     duration_ms = int((now_utc() - start).total_seconds() * 1000)
 
     app_logger.info(
-        f"ip={ip} method={method} path={path} status={response.status_code} duration_ms={duration_ms}"
+        "http_request",
+        extra={
+            "extra_data": {
+                "type": "http",
+                "request_id": request_id,
+                "ip": ip,
+                "user": user or "anonymous",
+                "method": method,
+                "path": path,
+                "status": response.status_code,
+                "duration_ms": duration_ms,
+                "ua": ua,
+            }
+        },
     )
 
     return response
@@ -553,7 +624,14 @@ def login_submit(
     try:
         banned, _until = is_ip_banned(conn, ip)
         if banned:
-            sec_logger.info(f"ip={ip} action=login status=blocked reason=ip_banned")
+            # sec_logger.info(f"ip={ip} action=login status=blocked reason=ip_banned")
+            log_security_event(
+                event="login",
+                ip=ip,
+                user=u,
+                outcome="blocked",
+                reason="ip_banned",
+            )
             return render(
                 "login.html", request=request, error="Login failed", title="Login"
             )
@@ -573,8 +651,17 @@ def login_submit(
         if not ok:
             now_banned, new_until, attempt_count = record_login_failure(conn, ip)
             conn.commit()
-            sec_logger.info(
-                f"ip={ip} action=login status=fail attempts={attempt_count} now_banned={now_banned} banned_until={new_until.isoformat() if new_until else None}"
+            # sec_logger.info(
+            #     f"ip={ip} action=login status=fail attempts={attempt_count} now_banned={now_banned} banned_until={new_until.isoformat() if new_until else None}"
+            # )
+            log_security_event(
+                event="login",
+                ip=ip,
+                outcome="fail",
+                user=u,
+                reason="invalid_credentials",
+                attempts=attempt_count,
+                banned_until=new_until if now_banned else None,
             )
             return render(
                 "login.html", request=request, error="Login failed", title="Login"
@@ -582,7 +669,13 @@ def login_submit(
 
         clear_login_failures_on_success(conn, ip)
         conn.commit()
-        sec_logger.info(f"ip={ip} action=login status=success user={u}")
+        # sec_logger.info(f"ip={ip} action=login status=success user={u}")
+        log_security_event(
+            event="login",
+            ip=ip,
+            outcome="success",
+            user=u,
+        )
 
         resp = RedirectResponse("/solve", status_code=303)
         token = sign_session(u)
@@ -629,7 +722,14 @@ def register_submit(
     try:
         banned, _ = is_ip_banned(conn, ip)
         if banned:
-            sec_logger.info(f"ip={ip} action=register status=blocked reason=ip_banned")
+            # sec_logger.info(f"ip={ip} action=register status=blocked reason=ip_banned")
+            log_security_event(
+                event="register",
+                ip=ip,
+                user=u,
+                outcome="blocked",
+                reason="ip_banned",
+            )
             return render(
                 "register.html",
                 request=request,
@@ -641,8 +741,15 @@ def register_submit(
         if len(password) < PASSWORD_MIN_LEN:
             record_login_failure(conn, ip)
             conn.commit()
-            sec_logger.info(
-                f"ip={ip} action=register status=fail reason=password_short user={u}"
+            # sec_logger.info(
+            #     f"ip={ip} action=register status=fail reason=password_short user={u}"
+            # )
+            log_security_event(
+                event="register",
+                ip=ip,
+                user=u,
+                outcome="fail",
+                reason="password_short",
             )
             return render(
                 "register.html",
@@ -675,7 +782,14 @@ def register_submit(
         if not ok:
             record_login_failure(conn, ip)
             conn.commit()
-            sec_logger.info(f"ip={ip} action=register status=fail user={u}")
+            # sec_logger.info(f"ip={ip} action=register status=fail user={u}")
+            log_security_event(
+                event="register",
+                ip=ip,
+                user=u,
+                outcome="fail",
+                reason="invalid invite",
+            )
             return render(
                 "register.html",
                 request=request,
@@ -694,8 +808,15 @@ def register_submit(
         except sqlite3.IntegrityError:
             record_login_failure(conn, ip)
             conn.commit()
-            sec_logger.info(
-                f"ip={ip} action=register status=fail reason=username_taken user={u}"
+            # sec_logger.info(
+            #     f"ip={ip} action=register status=fail reason=username_taken user={u}"
+            # )
+            log_security_event(
+                event="register",
+                ip=ip,
+                user=u,
+                outcome="fail",
+                reason="username_taken",
             )
             return render(
                 "register.html",
@@ -705,7 +826,11 @@ def register_submit(
                 title="Register",
             )
 
-        user_id = int(cur.lastrowid)
+        row_id = cur.lastrowid
+        if row_id is None:
+            raise RuntimeError("User insert did not return rowid")
+
+        user_id: int = row_id
         used_at = now_utc().isoformat()
         conn.execute(
             "UPDATE invites SET used_at_utc = ?, used_by_user_id = ? WHERE id = ?",
@@ -714,8 +839,18 @@ def register_submit(
         clear_login_failures_on_success(conn, ip)
         conn.commit()
 
-        sec_logger.info(
-            f"ip={ip} action=register status=success user={u} user_id={user_id} invite_id={int(inv['id'])}"
+        # sec_logger.info(
+        #     f"ip={ip} action=register status=success user={u} user_id={user_id} invite_id={int(inv['id'])}"
+        # )
+        log_security_event(
+            event="register",
+            ip=ip,
+            outcome="success",
+            user=u,
+            extra={
+                "user_id": user_id,
+                "invite_id": int(inv["id"]),
+            },
         )
 
         resp = RedirectResponse("/solve", status_code=303)
@@ -794,6 +929,20 @@ async def solve_submit(request: Request, user: str = Depends(require_auth)):
 
     fresh = [w for w in all_candidates if w not in used]
     previously_used = [w for w in all_candidates if w in used]
+
+    app_logger.info(
+        "solver_run",
+        extra={
+            "extra_data": {
+                "type": "solver",
+                "ip": client_ip(request),
+                "user": user or "anonymous",
+                "locked_guesses": len(locked_guesses),
+                "remaining_candidates": len(all_candidates),
+                "debug": debug,
+            }
+        },
+    )
 
     return render(
         "_results.html",
