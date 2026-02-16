@@ -492,6 +492,24 @@ async def add_headers(request: Request, call_next):
     return resp
 
 
+@app.middleware("http")
+async def request_logger(request: Request, call_next):
+    start = now_utc()
+    ip = client_ip(request)
+    method = request.method
+    path = request.url.path
+
+    response = await call_next(request)
+
+    duration_ms = int((now_utc() - start).total_seconds() * 1000)
+
+    app_logger.info(
+        f"ip={ip} method={method} path={path} status={response.status_code} duration_ms={duration_ms}"
+    )
+
+    return response
+
+
 def render(name: str, **ctx: Any) -> HTMLResponse:
     tpl = jinja.get_template(name)
     return HTMLResponse(tpl.render(**ctx))
