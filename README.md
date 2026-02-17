@@ -88,7 +88,6 @@ This keeps the deduction honest while still reflecting current Wordle behavior.
 - **Invite-only registration**
 - **Argon2** password hashing
 - Password length: **≥ 15 characters**
-- Login error is always: **“Login failed”**
 - Anti-brute-force protection:
   - 3 failed attempts per IP → ban for 24 hours
   - Decay rule: counters reset only after a successful login from that IP
@@ -187,16 +186,23 @@ Optional monthly refresh of allowed words (rarely changes):
 
 ⸻
 
-Why solvers can be wrong (teachable moment) 1. Repeated letters
-A single wrong color choice can “prove” there are two of a letter when there is only one. 2. Human mistakes
-One incorrect click can make the puzzle impossible.
-The contradiction panel helps you find these. 3. Word list differences
-Different solvers use different word lists.
+Why solvers can be wrong (teachable moment)
+
+1. Repeated letters: A single wrong color choice can “prove” there are two of a letter when there is only one.
+2. Human mistakes: One incorrect click can make the puzzle impossible. The contradiction panel helps you find these.
+3. Word list differences: Different solvers use different word lists.
+
 This app uses locally cached, explicit lists.
 
 ⸻
 
-Quick use 1. Log in. 2. Enter a guess. 3. Tap each tile to set its color
-(unknown → green → yellow → gray). 4. Click Lock for that row. 5. Repeat (up to 5 guesses). 6. Click Reset All to start over.
+Quick use
+
+1.  Log in.
+2.  Enter a guess.
+3.  Tap each tile to set its color (unknown → green → yellow → gray). 4
+4.  Click Lock for that row.
+5.  Repeat (up to 5 guesses).
+6.  Click Reset All to start over.
 
 Use the “Show why” toggle if you hit a contradiction.
