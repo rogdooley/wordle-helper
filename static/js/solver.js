@@ -9,7 +9,9 @@
   const initialRows = parseInt(board.dataset.initial, 10) || 3;
 
   const isMobile = window.matchMedia("(pointer: coarse)").matches;
-  const STATES = ["unknown", "green", "yellow", "gray"];
+  const STATES = ["gray", "green", "yellow"];
+  const EMPTY_STATES = ["unknown", "unknown", "unknown", "unknown", "unknown"];
+  const GRAY_STATES = ["gray", "gray", "gray", "gray", "gray"];
 
   const state = {
     rows: [],
@@ -22,7 +24,7 @@
       index,
       word: "",
       letters: ["", "", "", "", ""], // mobile source-of-truth
-      states: ["unknown", "unknown", "unknown", "unknown", "unknown"],
+      states: [...EMPTY_STATES],
       mode: "entry", // mobile: entry | marking
       locked: false,
       submitted: false,
@@ -123,6 +125,33 @@
     render();
   }
 
+  function hasCompleteWord(row) {
+    return /^[a-z]{5}$/.test(row.word);
+  }
+
+  function setDesktopWord(row, word) {
+    const previousWord = row.word;
+    row.word = word;
+    row.letters = [word[0] || "", word[1] || "", word[2] || "", word[3] || "", word[4] || ""];
+
+    if (word === previousWord) return;
+
+    if (!hasCompleteWord(row)) {
+      row.states = [...EMPTY_STATES];
+      return;
+    }
+
+    // A newly completed guess defaults to "not in the word." Editing an
+    // already complete guess clears those automatic marks so stale feedback
+    // cannot be locked against a different word.
+    row.states = /^[a-z]{5}$/.test(previousWord) ? [...EMPTY_STATES] : [...GRAY_STATES];
+  }
+
+  function nextState(current) {
+    if (current === "unknown") return "green";
+    return STATES[(STATES.indexOf(current) + 1) % STATES.length];
+  }
+
   function init() {
     state.rows = [];
     for (let i = 0; i < initialRows; i++) state.rows.push(mkRow(i));
@@ -199,8 +228,12 @@
         let v = (e.target.value || "").toLowerCase().replace(/[^a-z]/g, "");
         if (v.length > 5) v = v.slice(0, 5);
         e.target.value = v;
-        row.word = v;
-        row.letters = [v[0] || "", v[1] || "", v[2] || "", v[3] || "", v[4] || ""];
+        if (isMobile) {
+          row.word = v;
+          row.letters = [v[0] || "", v[1] || "", v[2] || "", v[3] || "", v[4] || ""];
+        } else {
+          setDesktopWord(row, v);
+        }
         syncTilesLetters(row.index);
       });
       el.appendChild(input);
@@ -232,9 +265,9 @@
             return;
           }
 
-          if (!row.word[i]) return;
+          if (!hasCompleteWord(row) || !row.word[i]) return;
           const cur = row.states[i];
-          const next = STATES[(STATES.indexOf(cur) + 1) % STATES.length];
+          const next = nextState(cur);
           row.states[i] = next;
           t.dataset.state = next;
         });
@@ -256,6 +289,7 @@
           markBtn.disabled = !lettersComplete;
           markBtn.addEventListener("click", () => {
             if (!lettersComplete) return;
+            row.states = [...GRAY_STATES];
             row.mode = "marking";
             state.active = { rowIndex: null, pos: null };
             if (hiddenKeyInput) hiddenKeyInput.blur();
@@ -269,7 +303,7 @@
           editBtn.textContent = "Edit letters";
           editBtn.addEventListener("click", () => {
             row.mode = "entry";
-            row.states = ["unknown", "unknown", "unknown", "unknown", "unknown"];
+            row.states = [...EMPTY_STATES];
             render();
           });
           actions.appendChild(editBtn);
